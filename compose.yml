@@ -1,0 +1,79 @@
+# thanks to ChatGPT 5.2 Thinking
+services:
+  # -------------- Phase 1: model download (one-shot) --------------
+  llama-model-download:
+    image: python:3.12-slim
+    profiles: ["download"]
+    volumes:
+      - ./models:/models
+      - ./scripts-in-docker:/scripts-in-docker
+    environment:
+      HF_HOME: /models/hf
+      HUGGINGFACE_HUB_CACHE: /models/hf
+      HF_REPO_ID: Qwen/Qwen3-Coder-Next-GGUF
+      HF_LOCAL_DIR: /models/hf/Qwen3-Coder-Next-GGUF
+      HF_ALLOW_PATTERNS: "*Q5_K_M*.gguf"
+    networks:
+      - download_net
+    command:
+      - bash
+      - -lc
+      - >
+        set -e;
+        pip -q install --no-cache-dir "huggingface_hub";
+        python /scripts-in-docker/download_hf_snapshot.py
+
+  # -------------- Phase 2: runtime server (air-gapped) --------------
+  llama-cpp:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    volumes:
+      - ./models:/models
+    environment:
+      LLAMA_CACHE: /models/hf
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    tty: true
+    networks:
+      - internal_net
+    command: >
+      --model /models/hf/Qwen3-Coder-Next-GGUF/Qwen3-Coder-Next-Q5_K_M/Qwen3-Coder-Next-Q5_K_M-00001-of-00004.gguf
+      --port 8000
+      --host 0.0.0.0
+      --jinja
+      --ctx-size 262144
+      --n-gpu-layers 3
+      -b 512
+      -ub 128
+
+  # -------------- Continue toolbox (air-gapped) --------------
+  continue-cli:
+    build:
+      context: ./continue-cli
+      dockerfile: Dockerfile
+    profiles: ["tools"]
+    working_dir: /workspace
+    volumes:
+      - ./workspace:/workspace
+      - ./dotcontinue:/root/.continue
+    stdin_open: true
+    tty: true
+    networks:
+      - internal_net
+
+networks:
+  # Has internet
+  download_net:
+    driver: bridge
+
+  # No internet egress; only container-to-container and host port publishing
+  internal_net:
+    driver: bridge
+    internal: true
+
