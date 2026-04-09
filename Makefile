@@ -1,6 +1,6 @@
 APT_PACKAGES_EXTRA ?= neovim emacs iputils-ping command-not-found bash-completion
 
-all: download-model build-and-run-server ask
+all: download-model build-and-run-server ask1
 
 # Download gghf models. Should return immediately if the models are already downloaded.
 download-model:
@@ -21,8 +21,12 @@ build-tools:
 	APT_PACKAGES_EXTRA="$(APT_PACKAGES_EXTRA)" docker compose --profile tools build continue-cli
 
 # launches client
-ask: build-tools
-	APT_PACKAGES_EXTRA="$(APT_PACKAGES_EXTRA)" docker compose --profile tools run --rm -it continue-cli cn --readonly --config /root/.continue/config.yaml
+ask1: build-tools
+	APT_PACKAGES_EXTRA="$(APT_PACKAGES_EXTRA)" docker compose --profile tools run --rm -it --volume ./workspace1:/workspace --volume ./dotcontinue1:/root/.continue continue-cli cn --readonly --config /root/.continue/config.yaml
+
+# launches client
+ask2: build-tools
+	APT_PACKAGES_EXTRA="$(APT_PACKAGES_EXTRA)" docker compose --profile tools run --rm -it --volume ./workspace2:/workspace --volume ./dotcontinue2:/root/.continue continue-cli cn --readonly --config /root/.continue/config.yaml
 
 # attaches to the existing client and execute bash
 bash:

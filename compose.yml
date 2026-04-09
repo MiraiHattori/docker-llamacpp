@@ -59,9 +59,10 @@ services:
       dockerfile: Dockerfile
     profiles: ["tools"]
     working_dir: /workspace
-    volumes:
-      - ./workspace:/workspace
-      - ./dotcontinue:/root/.continue
+    # switch at runtime
+    # volumes:
+    #   - ./workspace1:/workspace
+    #   - ./dotcontinue1:/root/.continue
     stdin_open: true
     tty: true
     networks:
